@@ -1,14 +1,19 @@
 import express from "express";
+import "dotenv/config";
 import { createServer as createViteServer } from "vite";
 import Database from "better-sqlite3";
 import path from "path";
 import { fileURLToPath } from "url";
 import bcrypt from "bcryptjs";
+import { GoogleGenAI, Type } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const db = new Database("vape_quit.db");
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, "vape_quit.db");
+const db = new Database(dbPath);
 
 // Initialize database
 db.exec(`
@@ -19,16 +24,13 @@ db.exec(`
     password TEXT,
     userData TEXT,
     planData TEXT,
-    quitDate TEXT
+    quitDate TEXT,
+    avatar TEXT DEFAULT '👤',
+    points INTEGER DEFAULT 0,
+    maxPoints INTEGER DEFAULT 0,
+    completedTasks TEXT DEFAULT '[]'
   )
 `);
-
-// Add new columns if they don't exist
-try { db.exec("ALTER TABLE users ADD COLUMN email TEXT UNIQUE"); } catch (e) {}
-try { db.exec("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT '👤'"); } catch (e) {}
-try { db.exec("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0"); } catch (e) {}
-try { db.exec("ALTER TABLE users ADD COLUMN maxPoints INTEGER DEFAULT 0"); } catch (e) {}
-try { db.exec("ALTER TABLE users ADD COLUMN completedTasks TEXT DEFAULT '[]'"); } catch (e) {}
 
 // Prepared Statements for Optimization
 const registerStmt = db.prepare("INSERT INTO users (username, email, password, quitDate, avatar, points, maxPoints, completedTasks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
@@ -138,6 +140,61 @@ async function startServer() {
       });
     } else {
       res.status(404).json({ error: "Usuario no encontrado" });
+    }
+  });
+
+  // Gemini API Routes
+  app.post("/api/gemini/generate-plan", async (req, res) => {
+    const { prompt, responseSchema } = req.body;
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: responseSchema
+        }
+      });
+      res.json({ text: response.text });
+    } catch (err) {
+      console.error("Gemini Plan Error:", err);
+      res.status(500).json({ error: "Error al generar el plan con IA" });
+    }
+  });
+
+  app.post("/api/gemini/daily-recommendation", async (req, res) => {
+    const { prompt, responseSchema } = req.body;
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: responseSchema
+        }
+      });
+      res.json({ text: response.text });
+    } catch (err) {
+      console.error("Gemini Rec Error:", err);
+      res.status(500).json({ error: "Error al generar recomendación diaria" });
+    }
+  });
+
+  app.post("/api/gemini/chat", async (req, res) => {
+    const { message, history, systemInstruction } = req.body;
+    try {
+      const chat = ai.chats.create({
+        model: "gemini-3-flash-preview",
+        config: {
+          systemInstruction: systemInstruction,
+        },
+        history: history || []
+      });
+      const response = await chat.sendMessage({ message });
+      res.json({ text: response.text });
+    } catch (err) {
+      console.error("Gemini Chat Error:", err);
+      res.status(500).json({ error: "Error en el chat de IA" });
     }
   });
 

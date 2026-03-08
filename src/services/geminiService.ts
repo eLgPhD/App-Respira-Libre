@@ -1,6 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+import { Type } from "@google/genai";
 
 export interface PlanData {
   diet: { title: string; description: string; benefits: string }[];
@@ -78,89 +76,89 @@ export async function generateQuitPlan(
     required: ["earlyMorning", "morning", "noon", "afternoon", "lateAfternoon", "evening", "night"]
   };
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
+  const responseSchema = {
+    type: Type.OBJECT,
+    properties: {
+      diet: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            benefits: { type: Type.STRING }
+          },
+          required: ["title", "description", "benefits"]
+        }
+      },
+      exercise: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            duration: { type: Type.STRING }
+          },
+          required: ["title", "description", "duration"]
+        }
+      },
+      rest: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            when: { type: Type.STRING }
+          },
+          required: ["title", "description", "when"]
+        }
+      },
+      tips: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING }
+      },
+      encouragingMessage: { type: Type.STRING },
+      weeklyRoutine: {
         type: Type.OBJECT,
         properties: {
-          diet: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                title: { type: Type.STRING },
-                description: { type: Type.STRING },
-                benefits: { type: Type.STRING }
-              },
-              required: ["title", "description", "benefits"]
-            }
-          },
-          exercise: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                title: { type: Type.STRING },
-                description: { type: Type.STRING },
-                duration: { type: Type.STRING }
-              },
-              required: ["title", "description", "duration"]
-            }
-          },
-          rest: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                title: { type: Type.STRING },
-                description: { type: Type.STRING },
-                when: { type: Type.STRING }
-              },
-              required: ["title", "description", "when"]
-            }
-          },
-          tips: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING }
-          },
-          encouragingMessage: { type: Type.STRING },
-          weeklyRoutine: {
-            type: Type.OBJECT,
-            properties: {
-              monday: daySchema,
-              tuesday: daySchema,
-              wednesday: daySchema,
-              thursday: daySchema,
-              friday: daySchema,
-              saturday: daySchema,
-              sunday: daySchema
-            },
-            required: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-          },
-          healthMilestones: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                time: { type: Type.STRING },
-                benefit: { type: Type.STRING },
-                description: { type: Type.STRING }
-              },
-              required: ["time", "benefit", "description"]
-            }
-          },
-          moneySavedPerMonth: { type: Type.NUMBER }
+          monday: daySchema,
+          tuesday: daySchema,
+          wednesday: daySchema,
+          thursday: daySchema,
+          friday: daySchema,
+          saturday: daySchema,
+          sunday: daySchema
         },
-        required: ["diet", "exercise", "rest", "tips", "encouragingMessage", "weeklyRoutine", "healthMilestones", "moneySavedPerMonth"]
-      }
-    }
+        required: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+      },
+      healthMilestones: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            time: { type: Type.STRING },
+            benefit: { type: Type.STRING },
+            description: { type: Type.STRING }
+          },
+          required: ["time", "benefit", "description"]
+        }
+      },
+      moneySavedPerMonth: { type: Type.NUMBER }
+    },
+    required: ["diet", "exercise", "rest", "tips", "encouragingMessage", "weeklyRoutine", "healthMilestones", "moneySavedPerMonth"]
+  };
+
+  const res = await fetch("/api/gemini/generate-plan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, responseSchema })
   });
 
-  const jsonStr = response.text?.trim() || "{}";
-  return JSON.parse(jsonStr) as PlanData;
+  if (!res.ok) throw new Error("Error generating plan");
+  const data = await res.json();
+  return JSON.parse(data.text || "{}") as PlanData;
 }
 
 export async function generateDailyRecommendation(
@@ -178,48 +176,64 @@ export async function generateDailyRecommendation(
     Respuesta: SOLO JSON. Español. Máxima brevedad.
   `;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          activity: { type: Type.STRING },
-          tip: { type: Type.STRING },
-          motivation: { type: Type.STRING }
-        },
-        required: ["activity", "tip", "motivation"]
-      }
-    }
+  const responseSchema = {
+    type: Type.OBJECT,
+    properties: {
+      activity: { type: Type.STRING },
+      tip: { type: Type.STRING },
+      motivation: { type: Type.STRING }
+    },
+    required: ["activity", "tip", "motivation"]
+  };
+
+  const res = await fetch("/api/gemini/daily-recommendation", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, responseSchema })
   });
 
-  const jsonStr = response.text?.trim() || "{}";
-  return JSON.parse(jsonStr);
+  if (!res.ok) throw new Error("Error generating daily recommendation");
+  const data = await res.json();
+  return JSON.parse(data.text || "{}");
 }
 
 export function getChatSession() {
-  return ai.chats.create({
-    model: "gemini-3-flash-preview",
-    config: {
-      systemInstruction: `
-        Asistente empático para dejar de vapear.
-        Objetivo: Escuchar, validar y dar consejos breves y prácticos.
-        Tono: Cercano, motivador, sin juzgar.
-        
-        REGLA DE ORO: Respuestas MUY BREVES (máx 3 frases).
-        
-        ESPECIALIDADES:
-        1. GANAS DE FUMAR/VAPEAR: Si el usuario tiene un antojo repentino, ofrece una técnica de distracción inmediata de 1 minuto (ej: respiración 4-7-8, beber agua fría, cambiar de habitación).
-        2. ESTRÉS: Si el usuario está estresado, ofrece una solución rápida de relajación o cambio de foco mental.
-        3. MOMENTOS ESPECÍFICOS: Si menciona un momento (ej: "después de comer", "con amigos"), da un consejo táctico para ese contexto.
+  const systemInstruction = `
+    Asistente empático para dejar de vapear.
+    Objetivo: Escuchar, validar y dar consejos breves y prácticos.
+    Tono: Cercano, motivador, sin juzgar.
+    
+    REGLA DE ORO: Respuestas MUY BREVES (máx 3 frases).
+    
+    ESPECIALIDADES:
+    1. GANAS DE FUMAR/VAPEAR: Si el usuario tiene un antojo repentino, ofrece una técnica de distracción inmediata de 1 minuto (ej: respiración 4-7-8, beber agua fría, cambiar de habitación).
+    2. ESTRÉS: Si el usuario está estresado, ofrece una solución rápida de relajación o cambio de foco mental.
+    3. MOMENTOS ESPECÍFICOS: Si menciona un momento (ej: "después de comer", "con amigos"), da un consejo táctico para ese contexto.
 
-        SEGURIDAD: Si detectas ansiedad severa o depresión, recomienda ayuda profesional (España: Teléfono Esperanza 717003717, FAD 900161515).
-        
-        IDIOMA: Español.
-      `,
-    },
-  });
+    SEGURIDAD: Si detectas ansiedad severa o depresión, recomienda ayuda profesional (España: Teléfono Esperanza 717003717, FAD 900161515).
+    
+    IDIOMA: Español.
+  `;
+
+  let history: { role: string; parts: { text: string }[] }[] = [];
+
+  return {
+    async sendMessage({ message }: { message: string }) {
+      const res = await fetch("/api/gemini/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, history, systemInstruction })
+      });
+
+      if (!res.ok) throw new Error("Error in chat session");
+      const data = await res.json();
+      
+      // Update history
+      history.push({ role: "user", parts: [{ text: message }] });
+      history.push({ role: "model", parts: [{ text: data.text }] });
+      
+      return { text: data.text };
+    }
+  };
 }
 
