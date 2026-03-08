@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || "" });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export interface PlanData {
   diet: { title: string; description: string; benefits: string }[];
@@ -78,86 +78,84 @@ export async function generateQuitPlan(
     required: ["earlyMorning", "morning", "noon", "afternoon", "lateAfternoon", "evening", "night"]
   };
 
-  const responseSchema = {
-    type: Type.OBJECT,
-    properties: {
-      diet: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            benefits: { type: Type.STRING }
-          },
-          required: ["title", "description", "benefits"]
-        }
-      },
-      exercise: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            duration: { type: Type.STRING }
-          },
-          required: ["title", "description", "duration"]
-        }
-      },
-      rest: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            when: { type: Type.STRING }
-          },
-          required: ["title", "description", "when"]
-        }
-      },
-      tips: {
-        type: Type.ARRAY,
-        items: { type: Type.STRING }
-      },
-      encouragingMessage: { type: Type.STRING },
-      weeklyRoutine: {
-        type: Type.OBJECT,
-        properties: {
-          monday: daySchema,
-          tuesday: daySchema,
-          wednesday: daySchema,
-          thursday: daySchema,
-          friday: daySchema,
-          saturday: daySchema,
-          sunday: daySchema
-        },
-        required: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-      },
-      healthMilestones: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            time: { type: Type.STRING },
-            benefit: { type: Type.STRING },
-            description: { type: Type.STRING }
-          },
-          required: ["time", "benefit", "description"]
-        }
-      },
-      moneySavedPerMonth: { type: Type.NUMBER }
-    },
-    required: ["diet", "exercise", "rest", "tips", "encouragingMessage", "weeklyRoutine", "healthMilestones", "moneySavedPerMonth"]
-  };
-
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
       responseMimeType: "application/json",
-      responseSchema: responseSchema
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          diet: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING },
+                description: { type: Type.STRING },
+                benefits: { type: Type.STRING }
+              },
+              required: ["title", "description", "benefits"]
+            }
+          },
+          exercise: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING },
+                description: { type: Type.STRING },
+                duration: { type: Type.STRING }
+              },
+              required: ["title", "description", "duration"]
+            }
+          },
+          rest: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING },
+                description: { type: Type.STRING },
+                when: { type: Type.STRING }
+              },
+              required: ["title", "description", "when"]
+            }
+          },
+          tips: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+          },
+          encouragingMessage: { type: Type.STRING },
+          weeklyRoutine: {
+            type: Type.OBJECT,
+            properties: {
+              monday: daySchema,
+              tuesday: daySchema,
+              wednesday: daySchema,
+              thursday: daySchema,
+              friday: daySchema,
+              saturday: daySchema,
+              sunday: daySchema
+            },
+            required: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+          },
+          healthMilestones: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                time: { type: Type.STRING },
+                benefit: { type: Type.STRING },
+                description: { type: Type.STRING }
+              },
+              required: ["time", "benefit", "description"]
+            }
+          },
+          moneySavedPerMonth: { type: Type.NUMBER }
+        },
+        required: ["diet", "exercise", "rest", "tips", "encouragingMessage", "weeklyRoutine", "healthMilestones", "moneySavedPerMonth"]
+      }
     }
   });
 
@@ -180,22 +178,20 @@ export async function generateDailyRecommendation(
     Respuesta: SOLO JSON. Español. Máxima brevedad.
   `;
 
-  const responseSchema = {
-    type: Type.OBJECT,
-    properties: {
-      activity: { type: Type.STRING },
-      tip: { type: Type.STRING },
-      motivation: { type: Type.STRING }
-    },
-    required: ["activity", "tip", "motivation"]
-  };
-
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
       responseMimeType: "application/json",
-      responseSchema: responseSchema
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          activity: { type: Type.STRING },
+          tip: { type: Type.STRING },
+          motivation: { type: Type.STRING }
+        },
+        required: ["activity", "tip", "motivation"]
+      }
     }
   });
 

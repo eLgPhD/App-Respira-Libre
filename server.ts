@@ -9,8 +9,7 @@ import bcrypt from "bcryptjs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath = process.env.DATABASE_PATH || path.join(__dirname, "vape_quit.db");
-const db = new Database(dbPath);
+const db = new Database("vape_quit.db");
 
 // Initialize database
 db.exec(`
@@ -21,13 +20,16 @@ db.exec(`
     password TEXT,
     userData TEXT,
     planData TEXT,
-    quitDate TEXT,
-    avatar TEXT DEFAULT '👤',
-    points INTEGER DEFAULT 0,
-    maxPoints INTEGER DEFAULT 0,
-    completedTasks TEXT DEFAULT '[]'
+    quitDate TEXT
   )
 `);
+
+// Add new columns if they don't exist
+try { db.exec("ALTER TABLE users ADD COLUMN email TEXT UNIQUE"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT '👤'"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN maxPoints INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN completedTasks TEXT DEFAULT '[]'"); } catch (e) {}
 
 // Prepared Statements for Optimization
 const registerStmt = db.prepare("INSERT INTO users (username, email, password, quitDate, avatar, points, maxPoints, completedTasks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
